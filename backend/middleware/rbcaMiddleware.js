@@ -1,123 +1,35 @@
 const jwt = require("jsonwebtoken");
-const Role = require("../models/role");
 const Permissions = require("../models/permissions");
 
-// Middleware to check if the user is a student
-exports.studentDashboard = () => {
+// Middleware factory to check if the user has a specific role
+const checkRole = (requiredRole) => {
   return (req, res, next) => {
     try {
-      // Step 1: Check if the Authorization header is present
+      // Check if the Authorization header is present
       if (!req.headers.authorization) {
         return res.status(401).json({
           message: "Authorization header missing. User is not logged in.",
         });
       }
 
-      // Step 2: Get the token from the Authorization header
+      // Get the token from the Authorization header
       const token = req.headers.authorization.split(" ")[1];
 
-      // Step 3: Verify the token using the JWT secret
+      // Verify the token using the JWT secret
       const decodedToken = jwt.verify(
         token,
         process.env.JWT_SECRET || "RANDOM-TOKEN"
       );
 
-      // Step 4: Retrieve the user details from the decoded token
-      const user = decodedToken;
-
-      // Step 5: Check if the user is a student
-      if (user.role !== "student") {
+      // Check if the user has the required role
+      if (decodedToken.role !== requiredRole) {
         return res.status(403).json({
-          message: "Access denied: Students only. Your role: " + user.role,
+          message: `Access denied: ${requiredRole}s only. Your role: ${decodedToken.role}`,
         });
       }
 
-      // Step 6: Pass the user object to the request object for further use
-      req.user = user;
-      next(); // Proceed to the next middleware or endpoint
-    } catch (error) {
-      console.error("Authorization error:", error);
-      return res.status(401).json({
-        message: "Invalid or expired token",
-      });
-    }
-  };
-};
-
-// Middleware to check if the user is a tutor
-exports.tutorDashboard = () => {
-  return (req, res, next) => {
-    try {
-      // Step 1: Check if the Authorization header is present
-      if (!req.headers.authorization) {
-        return res.status(401).json({
-          message: "Authorization header missing. User is not logged in.",
-        });
-      }
-
-      // Step 2: Get the token from the Authorization header
-      const token = req.headers.authorization.split(" ")[1];
-
-      // Step 3: Verify the token using the JWT secret
-      const decodedToken = jwt.verify(
-        token,
-        process.env.JWT_SECRET || "RANDOM-TOKEN"
-      );
-
-      // Step 4: Retrieve the user details from the decoded token
-      const user = decodedToken;
-
-      // Step 5: Check if the user is a student
-      if (user.role !== "tutor") {
-        return res.status(403).json({
-          message: "Access denied: Tutors only. Your role: " + user.role,
-        });
-      }
-
-      // Step 6: Pass the user object to the request object for further use
-      req.user = user;
-      next(); // Proceed to the next middleware or endpoint
-    } catch (error) {
-      console.error("Authorization error:", error);
-      return res.status(401).json({
-        message: "Invalid or expired token",
-      });
-    }
-  };
-};
-
-// Middleware to check if the user is a admin
-exports.adminDashboard = () => {
-  return (req, res, next) => {
-    try {
-      // Step 1: Check if the Authorization header is present
-      if (!req.headers.authorization) {
-        return res.status(401).json({
-          message: "Authorization header missing. User is not logged in.",
-        });
-      }
-
-      // Step 2: Get the token from the Authorization header
-      const token = req.headers.authorization.split(" ")[1];
-
-      // Step 3: Verify the token using the JWT secret
-      const decodedToken = jwt.verify(
-        token,
-        process.env.JWT_SECRET || "RANDOM-TOKEN"
-      );
-
-      // Step 4: Retrieve the user details from the decoded token
-      const user = decodedToken;
-
-      // Step 5: Check if the user is a student
-      if (user.role !== "admin") {
-        return res.status(403).json({
-          message: "Access denied: Admins only. Your role: " + user.role,
-        });
-      }
-
-      // Step 6: Pass the user object to the request object for further use
-      req.user = user;
+      // Pass the user object to the request object for further use
+      req.user = decodedToken;
       next(); // Proceed to the next middleware or endpoint
     } catch (error) {
       console.error("Authorization error:", error);
@@ -135,11 +47,17 @@ exports.checkPermission = (permission) => {
       userRole
     );
 
-    if (userPermissions) {
-      return userPermissions;
-      next();
+    // Check if the user has the required permission
+    if (userPermissions && userPermissions.includes(permission)) {
+      req.userPermissions = userPermissions; // Attach permissions to the request object
+      next(); // Proceed to the next middleware or route handler
     } else {
       return res.status(403).json({ error: "Access denied" });
     }
   };
 };
+
+// Exporting specific role-checking middleware
+exports.studentDashboard = checkRole("student");
+exports.tutorDashboard = checkRole("tutor");
+exports.adminDashboard = checkRole("admin");

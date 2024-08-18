@@ -13,7 +13,7 @@ router.get(
   "/dashboard/student",
   roleMiddleware.studentDashboard, // Use the generic role check middleware
   (req, res) => {
-    res.sendFile("./dashboard.html", { root: __dirname });
+    res.json({ message: "You are Authorised to access this endpoint" });
   }
 );
 
@@ -22,16 +22,16 @@ router.get(
   "/dashboard/tutor",
   roleMiddleware.tutorDashboard, // Use the generic role check middleware
   (req, res) => {
-    res.sendFile("./tutorDashboard.html", { root: __dirname });
+    res.json({ message: "You are Authorised to access this endpoint" });
   }
 );
 
 // Admin Dashboard Route
 router.get(
   "/dashboard/admin",
-  roleMiddleware.adminDashboard(), // Use the generic role check middleware
+  roleMiddleware.adminDashboard, // Use the generic role check middleware
   (req, res) => {
-    res.sendFile("./adminDashboard.html", { root: __dirname });
+    res.json({ message: "You are Authorised to access this endpoint" });
   }
 );
 
