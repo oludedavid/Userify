@@ -57,11 +57,7 @@ exports.checkPermission = (permission) => {
   };
 };
 
-//Accessing student data
-//if tutor: List of students no ability to edit or delete or add students data
-//if student: Only their own data
-//if admin: All students data with ability to edit, delete or add students data
-
+//Accessing/filter all users data based on the role
 exports.filterUsersByRole = () => {
   return async (req, res, next) => {
     try {
@@ -112,6 +108,60 @@ exports.filterUsersByRole = () => {
       });
     }
   };
+};
+
+//Adding a search functionality for the admin users to search for users by name or email or role
+exports.searchUser = async (req, res) => {
+  try {
+    // Check if the Authorization header is present
+    if (!req.headers.authorization) {
+      return res.status(401).json({
+        message: "Authorization header missing. User is not logged in.",
+      });
+    }
+
+    // Verify the token and check if the user is an admin
+    const token = req.headers.authorization.split(" ")[1];
+    const decodedToken = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "RANDOM-TOKEN"
+    );
+
+    if (decodedToken.role !== "admin") {
+      return res.status(403).json({
+        message: "Access denied. Admins only.",
+      });
+    }
+
+    // Build the search query dynamically from query parameters
+    const searchCriteria = {};
+
+    // if (req.query.name) {
+    //   searchCriteria.name = { $regex: req.query.name, $options: "i" };
+    // }
+    if (req.query.email) {
+      searchCriteria.email = { $regex: req.query.email, $options: "i" };
+    }
+
+    if (Object.keys(searchCriteria).length === 0) {
+      return res.status(400).json({
+        message: "At least one search criterion (name or email) is required",
+      });
+    }
+
+    // Perform the search
+    const searchResults = await User.find(searchCriteria);
+
+    // Return the search results
+    return res.json({
+      searchResults,
+    });
+  } catch (error) {
+    console.error("Authorization error:", error);
+    return res.status(401).json({
+      message: "Invalid or expired token",
+    });
+  }
 };
 
 // Exporting specific role-checking middleware

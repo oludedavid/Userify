@@ -8,11 +8,12 @@ router.get("/", (req, res) => {
   res.sendFile("./index.html", { root: __dirname });
 });
 
-//All users Route, When a user with the role of admin access this route, they will be able to see all users
-// This route is protected by the adminDashboard middleware
-//When a user with the role of student or tutor access this route, they will get only get their own details
-// All users Route
+// Get all users based on the role
 router.get("/allUsers", roleMiddleware.filterUsersByRole());
+
+//search endpoint for the admin users to search for users by name or email or role
+// Search Endpoint for Admins
+router.get("/search", roleMiddleware.searchUser);
 
 // Student Dashboard Route
 router.get(
@@ -46,5 +47,9 @@ router.post("/register", auth.register);
 
 // Login Route
 router.post("/login", auth.login);
+
+//update user
+// Update Profile Route
+router.put("/profile", auth.updateProfile);
 
 module.exports = router;

@@ -101,3 +101,74 @@ exports.login = async (req, res) => {
       .send({ message: "Internal server error during token creation." });
   }
 };
+
+//Allow users to update their profile
+// Allow users to update their profile (currently focusing on password)
+exports.updateProfile = async (req, res) => {
+  try {
+    // Check if the Authorization header is present
+    if (!req.headers.authorization) {
+      return res.status(401).json({
+        message: "Authorization header missing. User is not logged in.",
+      });
+    }
+
+    // Get the token from the Authorization header
+    const token = req.headers.authorization.split(" ")[1];
+
+    // Verify the token using the JWT secret
+    const decodedToken = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "RANDOM-TOKEN"
+    );
+
+    // Get the user id
+    const userId = decodedToken.id;
+
+    // Get the user details
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    // Check if the old password is provided and matches
+    if (req.body.password && req.body.newPassword) {
+      const passwordCheck = await bcrypt.compare(
+        req.body.password,
+        user.password
+      );
+
+      if (!passwordCheck) {
+        return res.status(400).json({
+          message: "Old password is incorrect",
+        });
+      }
+
+      // Ensure the new password is not the same as the old one
+      if (req.body.password === req.body.newPassword) {
+        return res.status(400).json({
+          message: "New password cannot be the same as the old password",
+        });
+      }
+
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(req.body.newPassword, 10);
+      user.password = hashedPassword;
+    }
+
+    // Save the updated user details
+    await user.save();
+
+    return res.status(200).json({
+      message: "Profile updated successfully",
+    });
+  } catch (err) {
+    console.error("Error during profile update:", err);
+    return res
+      .status(500)
+      .json({ message: "Server error, please try again later" });
+  }
+};
