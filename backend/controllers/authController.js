@@ -2,10 +2,12 @@ const User = require("../models/user");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const Role = require("../models/role");
+const Permissions = require("../models/permissions");
 
 // Create an instance of the Role class
 const roleManager = new Role();
-
+//permission manager
+const permissionManager = new Permissions();
 //register a user to the database
 exports.register = async (req, res) => {
   try {
@@ -62,13 +64,27 @@ exports.login = async (req, res) => {
           err,
         });
       });
+    if (!passwordCheck) {
+      return res.status(400).send({
+        message: "Password do not match",
+      });
+    }
 
     // get user role
     const userRole = user?.role || "no role found";
 
+    //get user permissions
+    const userPermissions =
+      permissionManager.getPermissionsByRoleName(userRole);
+
     //create session management using jwt
     let token = jwt.sign(
-      { email: user.email, role: userRole, id: user._id },
+      {
+        email: user.email,
+        role: userRole,
+        id: user._id,
+        permissions: userPermissions,
+      },
       process.env.JWT_SECRET || "RANDOM-TOKEN",
       { expiresIn: "24h", algorithm: "HS256" }
     );

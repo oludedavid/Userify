@@ -8,6 +8,12 @@ router.get("/", (req, res) => {
   res.sendFile("./index.html", { root: __dirname });
 });
 
+//All users Route, When a user with the role of admin access this route, they will be able to see all users
+// This route is protected by the adminDashboard middleware
+//When a user with the role of student or tutor access this route, they will get only get their own details
+// All users Route
+router.get("/allUsers", roleMiddleware.filterUsersByRole());
+
 // Student Dashboard Route
 router.get(
   "/dashboard/student",

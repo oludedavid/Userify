@@ -11,11 +11,11 @@
     },
     {
       "name": "student",
-      "permissions": ["create_record", "read_record", "update_record"]
+      "permissions": ["read_record", "update_record"]
     },
     {
       "name": "tutor",
-      "permissions": ["create_record", "read_record"]
+      "permissions": ["update_record", "read_record"]
     }
   ]
 }
