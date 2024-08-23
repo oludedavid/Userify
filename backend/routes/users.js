@@ -15,6 +15,41 @@ router.get("/allUsers", roleMiddleware.filterUsersByRole());
 // Search Endpoint for Admins
 router.get("/search", roleMiddleware.searchUser);
 
+//pagination endpoint using the page and the pageSize as query parameters
+router.get("/pagination", async (req, res) => {
+  try {
+    //get the page number(page) and the desired number of items per page(pageSize)
+    const page = parseInt(req.query.page);
+    const pageSize = parseInt(req.query.pageSize);
+
+    // Get the total number of users (for calculating total pages)
+    const totalUsers = await User.countDocuments({});
+
+    //find the starting index per page,
+    const startingIndex = (page - 1) * pageSize;
+
+    // //find the ending index per page
+    // const endingIndex = page * pageSize;
+
+    //slice the users based on the starting and ending index
+    // const paginatedUsers = totalUsers.slice(startingIndex, endingIndex);
+
+    // Retrieve the paginated users directly from the database
+    const paginatedUsers = await User.find({})
+      .skip(startingIndex) // Skip the users from previous pages
+      .limit(pageSize); // Limit to the page size
+
+    // Calculate the total number of pages
+    const totalPages = Math.ceil(totalUsers / pageSize);
+
+    // Send the paginated users and total pages as the API response
+    res.json({ users: paginatedUsers, totalPages, currentPage: page });
+  } catch (error) {
+    console.error("Error fetching paginated users:", error);
+    res.status(500).json({ message: "Server error, please try again later" });
+  }
+});
+
 // Student Dashboard Route
 router.get(
   "/dashboard/student",
