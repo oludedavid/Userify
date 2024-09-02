@@ -12,17 +12,18 @@ const permissionManager = new Permissions();
 exports.register = async (req, res) => {
   try {
     // Get the payload from the request body
+
     const { email, password, role } = req.body;
+
+    // Check if the user role exists or is valid
+    if (!roleManager.checkRoleExists(role)) {
+      return res.status(400).json({ message: "Invalid role specified" });
+    }
 
     // Check if the email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "Email already exists" });
-    }
-
-    // Check if the user role exists or is valid
-    if (!roleManager.checkRoleExists(role)) {
-      return res.status(400).json({ message: "Invalid role specified" });
     }
 
     // Hash the password
@@ -35,9 +36,12 @@ exports.register = async (req, res) => {
     await user.save();
 
     // Return a success message
-    res.status(201).json({ message: "User created successfully" });
+    res.status(201).json({
+      message: "User created successfully. Please log into your account! 😊",
+    });
   } catch (err) {
     console.error("Error during registration:", err);
+
     res.status(500).json({ message: "Server error, please try again later" });
   }
 };
@@ -45,45 +49,38 @@ exports.register = async (req, res) => {
 //login a user
 exports.login = async (req, res) => {
   try {
-    //get the payload data
+    // get the payload data
     const { email, password } = req.body;
 
-    //find the user in the database
+    // find the user in the database
     const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(404).send({ message: "Email not found" });
     }
 
-    //compare the password entered by the user with that of the found user that matches the email using bcrypt
-    const passwordCheck = await bcrypt
-      .compare(password, user.password)
-      .catch((err) => {
-        res.status(400).send({
-          message: "Password do not match",
-          err,
-        });
-      });
+    // compare the password entered by the user with that of the found user that matches the email using bcrypt
+    const passwordCheck = await bcrypt.compare(password, user.password);
+
     if (!passwordCheck) {
       return res.status(400).send({
-        message: "Password do not match",
+        message: "Password does not match",
       });
     }
 
-    // get user role
-    const userRole = user?.role || "no role found";
+    // get user role from the found user
+    const userRole = user.role;
 
-    //get user permissions
+    // get user permissions
     const userPermissions =
       permissionManager.getPermissionsByRoleName(userRole);
 
-    //create session management using jwt
+    // create session management using jwt
     let token = jwt.sign(
       {
         email: user.email,
-        role: userRole,
         id: user._id,
-        permissions: userPermissions,
+        role: userRole,
       },
       process.env.JWT_SECRET || "RANDOM-TOKEN",
       { expiresIn: "24h", algorithm: "HS256" }
@@ -91,11 +88,14 @@ exports.login = async (req, res) => {
 
     return res.status(200).send({
       message: "Login Successful",
-      email: user.email,
+      user: {
+        role: userRole,
+        email: user.email,
+        permissions: userPermissions,
+      },
       token,
     });
   } catch (jwtError) {
-    console.log(jwtError);
     return res
       .status(500)
       .send({ message: "Internal server error during token creation." });
